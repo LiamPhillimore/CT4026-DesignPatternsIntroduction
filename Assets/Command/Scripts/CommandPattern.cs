@@ -1,19 +1,24 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using UnityEngine;
 
 public class CommandPattern : MonoBehaviour
 {
     [SerializeField]
     private GameObject target = null;
+    [SerializeField]
+    private int undoRecordLimit; // how many undo actions can be recorded
 
     // History stack for handing undo
     private Stack<ICommand> undoStack;
-
+    // History stack for handling redos
+    private Stack<ICommand> redoStack;
 
     private void Start()
     {
         undoStack = new Stack<ICommand>();
+        redoStack = new Stack<ICommand>();
     }
 
     private void Update()
@@ -21,6 +26,7 @@ public class CommandPattern : MonoBehaviour
         // Add commands if keys are pressed
         if (Input.GetKeyDown(KeyCode.UpArrow))
         {
+            Debug.Log("Up key pressed");
             Execute(new ForwardCommand());
         }
         if (Input.GetKeyDown(KeyCode.DownArrow))
@@ -44,9 +50,7 @@ public class CommandPattern : MonoBehaviour
 
         if (Input.GetKeyDown(KeyCode.R))
         {
-            Debug.Log("Not implemented redo yet");
-            // Todo:: Implement a redo feature
-            //Redo();
+            Redo();
         }
     }
 
@@ -66,6 +70,10 @@ public class CommandPattern : MonoBehaviour
         command.Execute();
         // Add it to the stack, so we can undo
         undoStack.Push(command);
+        /*if (undoStack.Count > undoRecordLimit) // if the redo stack exceeds the maximum size
+        {
+            undoStack = RemoveStackElement(undoStack, undoStack.Count); // remove the last element of the stack
+        } */
     }
 
     private void Undo()
@@ -73,12 +81,51 @@ public class CommandPattern : MonoBehaviour
         // Only if there are items in the stack
         if (undoStack.Count > 0)
         {
+            redoStack.Push(undoStack.Peek()); // stores the undone command in the redo stack
+            /*if (redoStack.Count > undoRecordLimit) // if the redo stack exceeds the maximum size
+            {
+                redoStack = RemoveStackElement(redoStack, redoStack.Count); // remove the last element of the stack
+            } */
             // Get and remove the last item from the stack
             ICommand command = undoStack.Pop();
             // Undo the command
             command.Undo();
         }
     }
+
+    private void Redo()
+    {
+        if (redoStack.Count > 0) // if there are items in stack
+        {
+            undoStack.Push(redoStack.Peek()); // stores the redone command back into the undo stack
+            /*if (undoStack.Count > undoRecordLimit) // if the redo stack exceeds the maximum size
+            {
+                undoStack = RemoveStackElement(undoStack, undoStack.Count); // remove the last element of the stack
+            } */
+            ICommand command = redoStack.Pop(); // get and remove the last undone command from the stack
+            command.Execute(); // executes the command, redoing it
+        }
+    }
+
+    // method to remove a particular element of a stack using a for loop to go through each element of the stack, placing it into a new stack or removing it if it is the element to be removed.
+    /*private Stack<ICommand> tempStack;
+    private Stack<ICommand> RemoveStackElement(Stack<ICommand> stack, int element)
+    { 
+
+        tempStack = new Stack<ICommand>();
+        for(int i = 0; i < stack.Count + 1; i++)
+        {
+            if (stack.Count == stack.Count - element + 1) // if element is the one to be removed, removes it
+            {
+                stack.Pop();
+            }
+            else
+            {
+                tempStack.Push(stack.Pop()); // else, move element to tempoary stack
+            }
+        }
+        return tempStack;
+    } */
 }
 
 // ICommand is the basic layout of our commands
